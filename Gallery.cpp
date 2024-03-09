@@ -30,16 +30,8 @@ int getCommandNumberFromUser()
 	return std::atoi(input.c_str());
 }
 
-int main(void)
+void openMessage()
 {
-	// initialization data access
-	MemoryAccess dataAccess;
-
-	// initialize album manager
-	AlbumManager albumManager(dataAccess);
-
-
-	std::string albumName;
 	// Get current time as time_point
 	auto current_time_point = std::chrono::system_clock::now();
 
@@ -56,6 +48,19 @@ int main(void)
 		<< ptm->tm_hour << ":"
 		<< ptm->tm_min << ":"
 		<< ptm->tm_sec << std::endl;
+}
+
+int main(void)
+{
+	// initialization data access
+	MemoryAccess dataAccess;
+
+	// initialize album manager
+	AlbumManager albumManager(dataAccess);
+
+
+	std::string albumName;
+	openMessage();
 	std::cout << "Welcome to Gallery!" << std::endl;
 	std::cout << "===================" << std::endl;
 	std::cout << "Type " << HELP << " to a list of all supported commands" << std::endl;
