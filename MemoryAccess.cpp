@@ -189,6 +189,12 @@ void MemoryAccess::deleteUser(const User& user)
 			}
 		}
 
+
+		for (auto albums = m_albums.begin(); albums != m_albums.end(); ++albums)
+		{
+			albums->untagUserInAlbum(user.getId());
+		}
+
 		for (auto iter = m_albums.begin(); iter != m_albums.end(); )
 		{
 			if (iter->getOwnerId() == user.getId())
