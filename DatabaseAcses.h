@@ -3,17 +3,20 @@
 #include "DatabaseAcses.h"
 #include "sqlite3.h"
 #include <list>
+#include <vector>
 #include <io.h>
 
 int loadIntoAlbums(void* data, int argc, char** argv, char** azColName);
 int loadIntoPictures(void* data, int argc, char** argv, char** azColName);
-
+int loadIntoUsers(void* data, int argc, char** argv, char** azColName);
 
 class DatabaseAccess : public IDataAccess
 {
 public:
 	static std::list<Album> albums;	
 	static std::list<Picture> pictures;
+	static std::vector<User> users;
+
 	DatabaseAccess() = default;
 	virtual ~DatabaseAccess() = default;
 

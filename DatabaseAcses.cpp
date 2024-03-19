@@ -153,6 +153,38 @@ void DatabaseAccess::untagUserInPicture(const std::string& albumName, const std:
 	this->runCommand(command, this->_db);
 }
 
+void DatabaseAccess::printUsers()
+{
+	std::string command = "SELECT * FROM USERS;";
+	this->runCommand(command, this->_db, loadIntoUsers);
+
+	std::cout << "Users list:" << std::endl;
+	std::cout << "-----------" << std::endl;
+	for (const auto& user : DatabaseAccess::users) {
+		std::cout << user << std::endl;
+	}
+}
+
+void DatabaseAccess::createUser(User& user)
+{
+	std::string command = "INSERT INTO USERS (NAME) VALUES (" + user.getName() + " );";
+	this->runCommand(command, this->_db);
+}
+
+void DatabaseAccess::deleteUser(const User& user)
+{
+	std::string command = "DELETE FROM USERS WHERE NAME = " + user.getName() + " ;";
+	this->runCommand(command, this->_db);
+}
+
+bool DatabaseAccess::doesUserExists(int userId)
+{
+	std::string command = "SELECT * FROM USERS WHERE ID = " + std::to_string(userId) + " ;";
+	this->runCommand(command, this->_db, loadIntoUsers);
+
+	return DatabaseAccess::users.empty() ? false : true;
+}
+
 void DatabaseAccess::tagUserInPicture(const std::string& albumName, const std::string& pictureName, int userId)
 {
 	int pictureId = this->getPictureFromAlbum(albumName, pictureName).getId();
@@ -179,10 +211,9 @@ int loadIntoAlbums(void* data, int argc, char** argv, char** azColName)
 		else if (std::string(azColName[i]) == ID) {
 			albumObj.setName(argv[i]);
 		}
+		// Add the newly created Album object to the passed-in vector
+		DatabaseAccess::albums.push_back(albumObj);
 	}
-
-	// Add the newly created Album object to the passed-in vector
-	DatabaseAccess::albums.push_back(albumObj);
 
 	return 0; // Return 0 to indicate success
 }
@@ -208,11 +239,26 @@ int loadIntoPictures(void* data, int argc, char** argv, char** azColName)
 		else if (std::string(azColName[i]) == ID) {
 			picture.setId(std::stoi(argv[i]));
 		}
-
+		// Add the newly created Album object to the passed-in vector
+		DatabaseAccess::pictures.push_back(picture);
 	}
 
-	// Add the newly created Album object to the passed-in vector
-	DatabaseAccess::pictures.push_back(picture);
-
 	return 0; // Return 0 to indicate success
+}
+
+int loadIntoUsers(void* data, int argc, char** argv, char** azColName)
+{
+	User user (0, "");
+
+	for (int i = 0; i < argc; i++) {
+		if (std::string(azColName[i]) == NAME) {
+			user.setName(argv[i]);
+		}
+		else if (std::string(azColName[i]) == ID) {
+			user.setId(std::stoi(argv[i]));
+		}
+		DatabaseAccess::users.push_back(user);
+	}
+
+	return 0;
 }
