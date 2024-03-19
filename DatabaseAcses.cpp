@@ -91,7 +91,12 @@ void DatabaseAccess::createAlbum(const Album& album)
 
 void DatabaseAccess::deleteAlbum(const std::string& albumName, int userId)
 {
-	std::string command = "DELETE FROM ALBUMS WHERE name = " + albumName + " AND USER_ID = " + std::to_string(userId)  + ";";
+	int albumId = this->openAlbum(albumName).getId();
+	std::string command = "DELETE FROM PICTURES WHERE ALBUM_ID = " + std::to_string(albumId) + ";";
+	this->runCommand(command, this->_db);
+
+
+	command = "DELETE FROM ALBUMS WHERE name = " + albumName + " AND USER_ID = " + std::to_string(userId)  + ";";
 	this->runCommand(command, this->_db);
 }
 
@@ -173,7 +178,9 @@ void DatabaseAccess::createUser(User& user)
 
 void DatabaseAccess::deleteUser(const User& user)
 {
-	std::string command = "DELETE FROM USERS WHERE NAME = " + user.getName() + " ;";
+	std::string command = "DELETE FROM TAGS WHERE USER_ID = " + std::to_string(user.getId()) + " ;";
+	std::string command = "DELETE FROM ALBUMS WHERE USER_ID = " + std::to_string(user.getId()) + " ;";
+	command = "DELETE FROM USERS WHERE NAME = " + std::to_string(user.getId()) + " ;";
 	this->runCommand(command, this->_db);
 }
 
@@ -183,6 +190,50 @@ bool DatabaseAccess::doesUserExists(int userId)
 	this->runCommand(command, this->_db, loadIntoUsers);
 
 	return DatabaseAccess::users.empty() ? false : true;
+}
+
+User DatabaseAccess::getUser(int userId)
+{
+	std::string command = "SELECT * FROM USERS WHERE ID = " + std::to_string(userId) + " ;";
+	this->runCommand(command, this->_db, loadIntoUsers);
+
+	if (DatabaseAccess::users.empty())
+	{
+		throw std::invalid_argument("User does not exist ");
+	}
+	else
+	{
+		return DatabaseAccess::users[0];
+	}
+}
+
+int DatabaseAccess::countAlbumsOwnedOfUser(const User& user)
+{
+	std::string command = "SELECT COUNT (*) FROM ALBUMS WHERE USER_ID = " + std::to_string(user.getId()) + " ;";
+	int count = 0;
+	this->runCommand(command, this->_db, countCallback, &count);
+	return count;
+}
+
+int DatabaseAccess::countAlbumsTaggedOfUser(const User& user)
+{
+	std::string command = "SELECT COUNT(DISTINCT ALBUMS.ID) FROM TAGS INNER JOIN PICTURES ON TAGS.PICTURE_ID = PICTURES.ID INNER JOIN ALBUMS ON PICTURES.ALBUM_ID = ALBUMS.ID WHERE TAGS.USER_ID = " + std::to_string(user.getId()) + " ;";
+	int count = 0;
+	this->runCommand(command, this->_db, countCallback, &count);
+	return count;
+}
+
+int DatabaseAccess::countTagsOfUser(const User& user)
+{
+	std::string command = "SELECT COUNT (*) FROM TAGS WHERE USER_ID = " + std::to_string(user.getId()) + " ;";
+	int count = 0;
+	this->runCommand(command, this->_db, countCallback, &count);
+	return count;
+}
+
+float DatabaseAccess::averageTagsPerAlbumOfUser(const User& user)
+{
+	return (float)this->countTagsOfUser(user) / this->countAlbumsOwnedOfUser(user);
 }
 
 void DatabaseAccess::tagUserInPicture(const std::string& albumName, const std::string& pictureName, int userId)
@@ -260,5 +311,14 @@ int loadIntoUsers(void* data, int argc, char** argv, char** azColName)
 		DatabaseAccess::users.push_back(user);
 	}
 
+	return 0;
+}
+
+int countCallback(void* data, int argc, char** argv, char** azColName)
+{
+	int* count = static_cast<int*>(data);
+	if (argv[0]) {
+		*count = std::stoi(argv[0]);
+	}
 	return 0;
 }

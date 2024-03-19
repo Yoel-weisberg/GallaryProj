@@ -9,6 +9,7 @@
 int loadIntoAlbums(void* data, int argc, char** argv, char** azColName);
 int loadIntoPictures(void* data, int argc, char** argv, char** azColName);
 int loadIntoUsers(void* data, int argc, char** argv, char** azColName);
+int countCallback(void* data, int argc, char** argv, char** azColName);
 
 class DatabaseAccess : public IDataAccess
 {
