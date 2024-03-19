@@ -15,7 +15,7 @@
 
 std::list<Album> DatabaseAccess::albums;
 std::list<Picture> DatabaseAccess::pictures;
-
+std::vector<User> DatabaseAccess::users;
 
 bool DatabaseAccess::open()
 {
@@ -39,6 +39,15 @@ bool DatabaseAccess::open()
 }
 
 void DatabaseAccess::clear() {}
+
+int DatabaseAccess::getTheNextUserId()
+{
+	std::string command = "SELECT max(ID) FROM USERS;";
+	int currentMax = 0;
+
+	this->runCommand(command, this->_db, countCallback, &currentMax);
+	return currentMax == NULL ? 1 : currentMax + 1;
+}
 
 bool DatabaseAccess::runCommand(const std::string& sqlStatement, sqlite3* db, int(*callback)(void*, int, char**, char**), void* secondParam)
 {
@@ -99,7 +108,7 @@ const std::list<Album> DatabaseAccess::getAlbumsOfUser(const User& user)
 
 void DatabaseAccess::createAlbum(const Album& album)
 {
-	std::string command = "INSERT INTO ALBUMS (name, CREATION_DATE, USER_ID) VALUES (" + album.getName() + ", " + album.getCreationDate() + ", " + std::to_string(album.getOwnerId()) + " );";
+	std::string command = "INSERT INTO ALBUMS (name, CREATION_DATE, USER_ID) VALUES ( \" " + album.getName() + " \", \" " + album.getCreationDate() + " \" , " + std::to_string(album.getOwnerId()) + " );";
 	this->runCommand(command, this->_db);
 }
 
@@ -117,14 +126,15 @@ void DatabaseAccess::deleteAlbum(const std::string& albumName, int userId)
 
 bool DatabaseAccess::doesAlbumExists(const std::string& albumName, int userId)
 {
-	std::string command = "SELECT * FROM ALBUMS WHERE NAME =  " + albumName + "AND USER_ID = " + std::to_string(userId) + ";";
+	std::string command = "SELECT * FROM ALBUMS WHERE NAME =  \" " + albumName + " \" AND USER_ID = " + std::to_string(userId) + " ;";
 	this->runCommand(command, this->_db, loadIntoAlbums);
 	return DatabaseAccess::albums.size() != 0 ? true : false;
 }
 
 Album DatabaseAccess::openAlbum(const std::string& albumName)
 {
-	std::string command = "SELECT * FROM ALBUMS WHERE NAME =  " + albumName + ";";
+	std::string command = "SELECT * FROM ALBUMS WHERE NAME = \" " + albumName + " \" ;";
+	this->runCommand(command, this->_db, loadIntoAlbums);
 	if (DatabaseAccess::albums.size() != 0)
 	{
 		auto begin = DatabaseAccess::albums.begin();
@@ -154,14 +164,14 @@ void DatabaseAccess::printAlbums()
 void DatabaseAccess::addPictureToAlbumByName(const std::string& albumName, const Picture& picture)
 {
 	int id = this->openAlbum(albumName).getId();
-	std::string command = "INSERT INTO PICTURES (name, LOCATION, CREATION_DATE, ALBUM_ID) VALUES ( " + picture.getName() + ", " + picture.getPath() + ", " + picture.getCreationDate() + ", " + std::to_string(id) + " );";
+	std::string command = "INSERT INTO PICTURES (name, LOCATION, CREATION_DATE, ALBUM_ID) VALUES ( \" " + picture.getName() + " \" , \" " + picture.getPath() + " \" , \" " + picture.getCreationDate() + " \" , " + std::to_string(id) + " );";
 	this->runCommand(command, this->_db);
 }
 
 void DatabaseAccess::removePictureFromAlbumByName(const std::string& albumName, const std::string& pictureName)
 {
 	int albumId = this->openAlbum(albumName).getId();
-	std::string command = "DELETE FROM PICTURES WHERE NAME = " + pictureName + " AND ALBUM_ID = " + std::to_string(albumId) + " ;";
+	std::string command = "DELETE FROM PICTURES WHERE NAME = \" " + pictureName + " \" AND ALBUM_ID = " + std::to_string(albumId) + " ;";
 	this->runCommand(command, this->_db);
 }
 
@@ -186,14 +196,14 @@ void DatabaseAccess::printUsers()
 
 void DatabaseAccess::createUser(User& user)
 {
-	std::string command = "INSERT INTO USERS (NAME) VALUES (" + user.getName() + " );";
+	std::string command = "INSERT INTO USERS (NAME, ID) VALUES (\" " + user.getName() + "\", " + std::to_string(user.getId()) + "); ";
 	this->runCommand(command, this->_db);
 }
 
 void DatabaseAccess::deleteUser(const User& user)
 {
 	std::string command = "DELETE FROM TAGS WHERE USER_ID = " + std::to_string(user.getId()) + " ;";
-	std::string command = "DELETE FROM ALBUMS WHERE USER_ID = " + std::to_string(user.getId()) + " ;";
+	command = "DELETE FROM ALBUMS WHERE USER_ID = " + std::to_string(user.getId()) + " ;";
 	command = "DELETE FROM USERS WHERE NAME = " + std::to_string(user.getId()) + " ;";
 	this->runCommand(command, this->_db);
 }
@@ -316,9 +326,8 @@ int loadIntoAlbums(void* data, int argc, char** argv, char** azColName)
 			albumObj.setName(argv[i]);
 		}
 		// Add the newly created Album object to the passed-in vector
-		DatabaseAccess::albums.push_back(albumObj);
 	}
-
+	DatabaseAccess::albums.push_back(albumObj);
 	return 0; // Return 0 to indicate success
 }
 
@@ -344,8 +353,9 @@ int loadIntoPictures(void* data, int argc, char** argv, char** azColName)
 			picture.setId(std::stoi(argv[i]));
 		}
 		// Add the newly created Album object to the passed-in vector
-		DatabaseAccess::pictures.push_back(picture);
 	}
+	DatabaseAccess::pictures.push_back(picture);
+
 
 	return 0; // Return 0 to indicate success
 }
@@ -361,8 +371,8 @@ int loadIntoUsers(void* data, int argc, char** argv, char** azColName)
 		else if (std::string(azColName[i]) == ID) {
 			user.setId(std::stoi(argv[i]));
 		}
-		DatabaseAccess::users.push_back(user);
 	}
+	DatabaseAccess::users.push_back(user);
 
 	return 0;
 }

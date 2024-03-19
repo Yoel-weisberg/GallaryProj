@@ -59,6 +59,8 @@ public:
 	void close() override {};
 	void clear() override;
 
+	virtual int getTheNextUserId() override;
+
 private:
 	bool runCommand(const std::string& sqlStatement, sqlite3* db, int (*callback)(void*, int, char**, char**) = nullptr, void* secondParam = nullptr);
 	Picture getPictureFromAlbum(const std::string& albumName, const std::string& picture);

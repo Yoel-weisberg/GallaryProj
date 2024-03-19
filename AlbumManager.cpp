@@ -289,7 +289,7 @@ void AlbumManager::addUser()
 {
 	std::string name = getInputFromConsole("Enter user name: ");
 
-	User user(++m_nextUserId,name);
+	User user(m_dataAccess.getTheNextUserId(), name);
 	
 	m_dataAccess.createUser(user);
 	std::cout << "User " << name << " with id @" << user.getId() << " created successfully." << std::endl;
