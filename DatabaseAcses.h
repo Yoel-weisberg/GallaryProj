@@ -1,9 +1,18 @@
 #pragma once
 #include "IDataAccess.h"
+#include "DatabaseAcses.h"
+#include "sqlite3.h"
+#include <list>
+#include <io.h>
+
+int loadIntoAlbums(void* data, int argc, char** argv, char** azColName);
+
 
 class DatabaseAccess : public IDataAccess
 {
 public:
+	static std::list<Album> albums;
+
 	DatabaseAccess() = default;
 	virtual ~DatabaseAccess() = default;
 
@@ -44,4 +53,9 @@ public:
 	bool open() override;
 	void close() override {};
 	void clear() override;
+
+private:
+	bool runCommand(const char* sqlStatement, sqlite3* db, int (*callback)(void*, int, char**, char**) = nullptr, void* secondParam = nullptr);
+
+	sqlite3* _db;
 };
