@@ -10,8 +10,12 @@
 #define NAME "NAME"
 #define CREATION_DATE "CREATION_DATE"
 #define USER_ID "USER_ID"
+#define LOCATION "LOCATION"
+#define ALBUM_ID "ALBUM_ID"
 
 std::list<Album> DatabaseAccess::albums;
+std::list<Picture> DatabaseAccess::pictures;
+
 
 bool DatabaseAccess::open()
 {
@@ -34,15 +38,12 @@ bool DatabaseAccess::open()
 	this->runCommand(CREATE_TAGS, this->_db);
 }
 
-void DatabaseAccess::clear()
-{
+void DatabaseAccess::clear() {}
 
-}
-
-bool DatabaseAccess::runCommand(const char* sqlStatement, sqlite3* db, int(*callback)(void*, int, char**, char**), void* secondParam)
+bool DatabaseAccess::runCommand(const std::string& sqlStatement, sqlite3* db, int(*callback)(void*, int, char**, char**), void* secondParam)
 {
 	char** errMessage = nullptr;
-	int res = sqlite3_exec(db, sqlStatement, callback, secondParam, errMessage);
+	int res = sqlite3_exec(db, sqlStatement.c_str(), callback, secondParam, errMessage);
 	if (res != SQLITE_OK)
 	{
 		std::cout << "1: " << res;
@@ -50,10 +51,27 @@ bool DatabaseAccess::runCommand(const char* sqlStatement, sqlite3* db, int(*call
 	}
 }
 
+Picture DatabaseAccess::getPictureFromAlbum(const std::string& albumName, const std::string& picture)
+{
+	int albumId = this->openAlbum(albumName).getId();
+	std::string command = "SELCET * FROM PICTURES WHERE ALBUM_ID = " + std::to_string(albumId) + " AND NAME = " + picture + " ;";
+
+	this->runCommand(command, this->_db, loadIntoPictures);
+
+	if (DatabaseAccess::pictures.size() != 0)
+	{
+		return *DatabaseAccess::pictures.begin();
+	}
+	else
+	{
+		throw std::invalid_argument("Picture with that name was not found ");
+	}
+}
+
 
 const std::list<Album> DatabaseAccess::getAlbums()
 {
-	char* sqlCommand = "SELECT * FROM ALBUMS;";
+	std::string sqlCommand = "SELECT * FROM ALBUMS;";
 	this->runCommand(sqlCommand, this->_db, loadIntoAlbums);
 	return DatabaseAccess::albums;
 }
@@ -61,26 +79,27 @@ const std::list<Album> DatabaseAccess::getAlbums()
 const std::list<Album> DatabaseAccess::getAlbumsOfUser(const User& user)
 {
 	std::string command = "SELECT * FROM ALBUMS WHERE USER_ID = " + user.getId();
-	this->runCommand(command.c_str(), this->_db, loadIntoAlbums);
+	this->runCommand(command, this->_db, loadIntoAlbums);
 	return DatabaseAccess::albums;
 }
 
 void DatabaseAccess::createAlbum(const Album& album)
 {
-	std::string command = "INSERT INTO ALBUMS (name, CREATION_DATE, USER_ID) VALUES (" + album.getName() + ", " + album.getCreationDate() + ", " + std::to_string(album.getOwnerId()) + ";";
-	this->runCommand(command.c_str(), this->_db);
+	std::string command = "INSERT INTO ALBUMS (name, CREATION_DATE, USER_ID) VALUES (" + album.getName() + ", " + album.getCreationDate() + ", " + std::to_string(album.getOwnerId()) + " );";
+	this->runCommand(command, this->_db);
 }
 
 void DatabaseAccess::deleteAlbum(const std::string& albumName, int userId)
 {
 	std::string command = "DELETE FROM ALBUMS WHERE name = " + albumName + " AND USER_ID = " + std::to_string(userId)  + ";";
-	this->runCommand(command.c_str(), this->_db);
+	this->runCommand(command, this->_db);
 }
+
 
 bool DatabaseAccess::doesAlbumExists(const std::string& albumName, int userId)
 {
 	std::string command = "SELECT * FROM ALBUMS WHERE NAME =  " + albumName + "AND USER_ID = " + std::to_string(userId) + ";";
-	this->runCommand(command.c_str(), this->_db, loadIntoAlbums);
+	this->runCommand(command, this->_db, loadIntoAlbums);
 	return DatabaseAccess::albums.size() != 0 ? true : false;
 }
 
@@ -113,25 +132,87 @@ void DatabaseAccess::printAlbums()
 	}
 }
 
+void DatabaseAccess::addPictureToAlbumByName(const std::string& albumName, const Picture& picture)
+{
+	int id = this->openAlbum(albumName).getId();
+	std::string command = "INSERT INTO PICTURES (name, LOCATION, CREATION_DATE, ALBUM_ID) VALUES ( " + picture.getName() + ", " + picture.getPath() + ", " + picture.getCreationDate() + ", " + std::to_string(id) + " );";
+	this->runCommand(command, this->_db);
+}
+
+void DatabaseAccess::removePictureFromAlbumByName(const std::string& albumName, const std::string& pictureName)
+{
+	int albumId = this->openAlbum(albumName).getId();
+	std::string command = "DELETE FROM PICTURES WHERE NAME = " + pictureName + " AND ALBUM_ID = " + std::to_string(albumId) + " ;";
+	this->runCommand(command, this->_db);
+}
+
+void DatabaseAccess::untagUserInPicture(const std::string& albumName, const std::string& pictureName, int userId)
+{
+	int pictureId = this->getPictureFromAlbum(albumName, pictureName).getId();
+	std::string command = "DELETE FROM TAGS WHERE PICTURE_ID = " + std::to_string(pictureId) + "AND USER_ID = " + std::to_string(userId) + " ;";
+	this->runCommand(command, this->_db);
+}
+
+void DatabaseAccess::tagUserInPicture(const std::string& albumName, const std::string& pictureName, int userId)
+{
+	int pictureId = this->getPictureFromAlbum(albumName, pictureName).getId();
+
+	std::string command = "INSERT INTO TAGS (PICTURE_ID, USER_ID) VALUES ( " + std::to_string(pictureId) + ", " + std::to_string(userId) + " );";
+	this->runCommand(command, this->_db);
+}
+
 int loadIntoAlbums(void* data, int argc, char** argv, char** azColName)
 {
 	// Create a new Album object for each row fetched
 	Album albumObj (0, "");
 
 	for (int i = 0; i < argc; i++) {
-		if (std::string(azColName[i]) == "USER_ID") {
+		if (std::string(azColName[i]) == USER_ID) {
 			albumObj.setOwner(std::stoi(argv[i]));
 		}
-		else if (std::string(azColName[i]) == "CREATION_DATE") {
+		else if (std::string(azColName[i]) == CREATION_DATE) {
 			albumObj.setCreationDate(argv[i]);
 		}
-		else if (std::string(azColName[i]) == "NAME") {
+		else if (std::string(azColName[i]) == NAME) {
+			albumObj.setName(argv[i]);
+		}
+		else if (std::string(azColName[i]) == ID) {
 			albumObj.setName(argv[i]);
 		}
 	}
 
 	// Add the newly created Album object to the passed-in vector
 	DatabaseAccess::albums.push_back(albumObj);
+
+	return 0; // Return 0 to indicate success
+}
+
+int loadIntoPictures(void* data, int argc, char** argv, char** azColName)
+{
+	// Create a new Album object for each row fetched
+	Picture picture(0, "");
+
+	for (int i = 0; i < argc; i++) {
+		if (std::string(azColName[i]) == NAME) {
+			picture.setName(argv[i]);
+		}
+		else if (std::string(azColName[i]) == CREATION_DATE) {
+			picture.setCreationDate(argv[i]);
+		}
+		else if (std::string(azColName[i]) == LOCATION) {
+			picture.setLocation(argv[i]);
+		}
+		else if (std::string(azColName[i]) == ALBUM_ID) {
+			picture.setAlbumId(std::stoi(argv[i]));
+		}
+		else if (std::string(azColName[i]) == ID) {
+			picture.setId(std::stoi(argv[i]));
+		}
+
+	}
+
+	// Add the newly created Album object to the passed-in vector
+	DatabaseAccess::pictures.push_back(picture);
 
 	return 0; // Return 0 to indicate success
 }

@@ -37,9 +37,13 @@ public:
 	bool operator==(const Album& other) const;
 	friend std::ostream& operator<<(std::ostream& strOut, const Album& album);
 
+	int getId() const;
+	void setId(const int& val);
+
 private:
     int m_ownerId { 0 };
 	std::string m_name;
+	int _id;
 	std::string m_creationDate;
 	std::list<Picture> m_pictures;
 };

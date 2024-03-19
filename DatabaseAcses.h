@@ -6,13 +6,14 @@
 #include <io.h>
 
 int loadIntoAlbums(void* data, int argc, char** argv, char** azColName);
+int loadIntoPictures(void* data, int argc, char** argv, char** azColName);
 
 
 class DatabaseAccess : public IDataAccess
 {
 public:
-	static std::list<Album> albums;
-
+	static std::list<Album> albums;	
+	static std::list<Picture> pictures;
 	DatabaseAccess() = default;
 	virtual ~DatabaseAccess() = default;
 
@@ -55,7 +56,7 @@ public:
 	void clear() override;
 
 private:
-	bool runCommand(const char* sqlStatement, sqlite3* db, int (*callback)(void*, int, char**, char**) = nullptr, void* secondParam = nullptr);
-
+	bool runCommand(const std::string& sqlStatement, sqlite3* db, int (*callback)(void*, int, char**, char**) = nullptr, void* secondParam = nullptr);
+	Picture getPictureFromAlbum(const std::string& albumName, const std::string& picture);
 	sqlite3* _db;
 };
