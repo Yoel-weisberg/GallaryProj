@@ -62,5 +62,6 @@ public:
 private:
 	bool runCommand(const std::string& sqlStatement, sqlite3* db, int (*callback)(void*, int, char**, char**) = nullptr, void* secondParam = nullptr);
 	Picture getPictureFromAlbum(const std::string& albumName, const std::string& picture);
+	Picture getPicture(const int& id);
 	sqlite3* _db;
 };

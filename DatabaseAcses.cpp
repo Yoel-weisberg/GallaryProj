@@ -68,6 +68,20 @@ Picture DatabaseAccess::getPictureFromAlbum(const std::string& albumName, const 
 	}
 }
 
+Picture DatabaseAccess::getPicture(const int& id)
+{
+	std::string query = "SELECT * FROM PICTURES WHERE ID = " + std::to_string(id) + " ;";
+	this->runCommand(query, this->_db, loadIntoPictures);
+	if (DatabaseAccess::pictures.empty())
+	{
+		throw std::invalid_argument("Picture not found with that id");
+	}
+	else
+	{
+		return *DatabaseAccess::pictures.begin();
+	}
+}
+
 
 const std::list<Album> DatabaseAccess::getAlbums()
 {
@@ -234,6 +248,45 @@ int DatabaseAccess::countTagsOfUser(const User& user)
 float DatabaseAccess::averageTagsPerAlbumOfUser(const User& user)
 {
 	return (float)this->countTagsOfUser(user) / this->countAlbumsOwnedOfUser(user);
+}
+
+User DatabaseAccess::getTopTaggedUser()
+{
+	this->runCommand("SELECT * FROM USERS ;", this->_db, loadIntoUsers);
+	int currentMax = 0;
+	User currentUserMax (0, "");
+	if (DatabaseAccess::users.empty())
+	{
+		throw std::invalid_argument("No user is in database ");
+	}
+
+	for (const User user : DatabaseAccess::users)
+	{
+		int amountOfTags = this->countTagsOfUser(user);
+		if (amountOfTags > currentMax)
+		{
+			currentMax = amountOfTags;
+			currentUserMax = user;
+		}
+	}
+	return currentUserMax;
+}
+
+Picture DatabaseAccess::getTopTaggedPicture()
+{
+	std::string query = "SELECT PICTURE_ID, COUNT(PICTURE_ID) AS Count FROM TAGS GROUP BY PICTURE_ID ORDER BY Count DESC LIMIT 1 ;";
+	int pictureId;
+	this->runCommand(query, this->_db, countCallback, &pictureId);
+	
+	return this->getPicture(pictureId);
+}
+
+std::list<Picture> DatabaseAccess::getTaggedPicturesOfUser(const User& user)
+{
+	std::string query = "SELECT * FROM PICTURES INNER JOIN TAGS ON PICTURES.ID = TAGS.PICTURE_ID INNER JOIN USERS ON TAGS.USER_ID = USERS.ID WHERE USERS.ID = " + std::to_string(user.getId()) + " ;";
+	this->runCommand(query, this->_db, loadIntoPictures);
+
+	return DatabaseAccess::pictures;
 }
 
 void DatabaseAccess::tagUserInPicture(const std::string& albumName, const std::string& pictureName, int userId)
