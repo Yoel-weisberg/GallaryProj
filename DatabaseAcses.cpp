@@ -60,9 +60,57 @@ const std::list<Album> DatabaseAccess::getAlbums()
 
 const std::list<Album> DatabaseAccess::getAlbumsOfUser(const User& user)
 {
-	std::string command = ""
-	this->runCommand(sqlCommand, this->_db, loadIntoAlbums);
+	std::string command = "SELECT * FROM ALBUMS WHERE USER_ID = " + user.getId();
+	this->runCommand(command.c_str(), this->_db, loadIntoAlbums);
 	return DatabaseAccess::albums;
+}
+
+void DatabaseAccess::createAlbum(const Album& album)
+{
+	std::string command = "INSERT INTO ALBUMS (name, CREATION_DATE, USER_ID) VALUES (" + album.getName() + ", " + album.getCreationDate() + ", " + std::to_string(album.getOwnerId()) + ";";
+	this->runCommand(command.c_str(), this->_db);
+}
+
+void DatabaseAccess::deleteAlbum(const std::string& albumName, int userId)
+{
+	std::string command = "DELETE FROM ALBUMS WHERE name = " + albumName + " AND USER_ID = " + std::to_string(userId)  + ";";
+	this->runCommand(command.c_str(), this->_db);
+}
+
+bool DatabaseAccess::doesAlbumExists(const std::string& albumName, int userId)
+{
+	std::string command = "SELECT * FROM ALBUMS WHERE NAME =  " + albumName + "AND USER_ID = " + std::to_string(userId) + ";";
+	this->runCommand(command.c_str(), this->_db, loadIntoAlbums);
+	return DatabaseAccess::albums.size() != 0 ? true : false;
+}
+
+Album DatabaseAccess::openAlbum(const std::string& albumName)
+{
+	std::string command = "SELECT * FROM ALBUMS WHERE NAME =  " + albumName + ";";
+	if (DatabaseAccess::albums.size() != 0)
+	{
+		auto begin = DatabaseAccess::albums.begin();
+		return *begin;
+	}
+	else
+	{
+		throw std::invalid_argument("No album with name " + albumName + " exists");
+	}
+}
+
+void DatabaseAccess::closeAlbum(Album& pAlbum) {}
+
+void DatabaseAccess::printAlbums()
+{
+	this->getAlbums();
+	if (DatabaseAccess::albums.empty()) {
+		throw std::invalid_argument("There are no existing albums.");
+	}
+	std::cout << "Album list:" << std::endl;
+	std::cout << "-----------" << std::endl;
+	for (const Album& album : DatabaseAccess::albums) {
+		std::cout << std::setw(5) << "* " << album;
+	}
 }
 
 int loadIntoAlbums(void* data, int argc, char** argv, char** azColName)
