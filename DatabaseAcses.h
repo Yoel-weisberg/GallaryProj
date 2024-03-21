@@ -68,6 +68,8 @@ public:
 	virtual bool isUserTaggedInPicture(const User& user, const Picture& picture);
 
 	virtual std::list<User> getUsersTaggedInPicture(const Picture& picture) override;
+
+	virtual bool doesUserExists(const std::string& name) override;
 private:
 	std::string removeWhiteSpacesBeforeAndAfter(const std::string& str);
 	bool runCommand(const std::string& sqlStatement, sqlite3* db, int (*callback)(void*, int, char**, char**) = nullptr, void* secondParam = nullptr);

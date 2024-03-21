@@ -296,6 +296,9 @@ void AlbumManager::addUser()
 {
 	std::string name = getInputFromConsole("Enter user name: ");
 
+	if (m_dataAccess.doesUserExists(name)) {
+		throw std::invalid_argument("The user already exsists \n");
+	}
 	User user(m_dataAccess.getTheNextId(USERS_TABLE), name);
 	
 	m_dataAccess.createUser(user);

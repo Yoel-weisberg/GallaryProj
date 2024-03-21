@@ -134,6 +134,14 @@ std::list<User> DatabaseAccess::getUsersTaggedInPicture(const Picture& picture)
 	return res;
 }
 
+bool DatabaseAccess::doesUserExists(const std::string& name)
+{
+	std::string query = "SELECT COUNT(*) FROM USERS WHERE NAME = \"" + name + "\"  ;";
+	int times = 0;
+	this->runCommand(query, this->_db, countCallback, &times);
+	return times > 0 ? true : false;
+}
+
 
 Picture DatabaseAccess::getPicture(const int& id)
 {
@@ -264,7 +272,7 @@ void DatabaseAccess::printUsers()
 
 void DatabaseAccess::createUser(User& user)
 {
-	std::string command = "INSERT INTO USERS (NAME, ID) VALUES (\" " + user.getName() + "\", " + std::to_string(user.getId()) + "); ";
+	std::string command = "INSERT INTO USERS (NAME, ID) VALUES (\"" + user.getName() + "\", " + std::to_string(user.getId()) + "); ";
 	this->runCommand(command, this->_db);
 }
 

@@ -56,4 +56,6 @@ public:
 
 	virtual std::list<User> getUsersTaggedInPicture(const Picture& picture) = 0;
 
+	virtual bool doesUserExists(const std::string& name) = 0;
+
 };
