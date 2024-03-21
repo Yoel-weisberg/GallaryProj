@@ -4,6 +4,8 @@
 #include "AlbumManager.h"
 #include "DatabaseAcses.h"
 
+#include <chrono> 
+#include <ctime>
 
 int getCommandNumberFromUser()
 {
@@ -29,6 +31,26 @@ int getCommandNumberFromUser()
 	return std::atoi(input.c_str());
 }
 
+void openMessage()
+{
+	// Get current time as time_point
+	auto current_time_point = std::chrono::system_clock::now();
+
+	// Convert time_point to time_t
+	std::time_t current_time = std::chrono::system_clock::to_time_t(current_time_point);
+
+	// Convert time_t to tm struct for easy access to year, month, day, etc.
+	struct tm* ptm = std::localtime(&current_time);
+
+	std::cout << "Craeted by Yoel Weisberg - The time is: ";
+	std::cout << 1900 + ptm->tm_year << "-"
+		<< 1 + ptm->tm_mon << "-"
+		<< ptm->tm_mday << " "
+		<< ptm->tm_hour << ":"
+		<< ptm->tm_min << ":"
+		<< ptm->tm_sec << std::endl;
+}
+
 int main(void)
 {
 	// initialization data access
@@ -39,6 +61,7 @@ int main(void)
 
 
 	std::string albumName;
+	openMessage();
 	std::cout << "Welcome to Gallery!" << std::endl;
 	std::cout << "===================" << std::endl;
 	std::cout << "Type " << HELP << " to a list of all supported commands" << std::endl;

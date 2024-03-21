@@ -186,9 +186,21 @@ void MemoryAccess::deleteUser(const User& user)
 		for (auto iter = m_users.begin(); iter != m_users.end(); ++iter) {
 			if (*iter == user) {
 				iter = m_users.erase(iter);
-				return;
 			}
 		}
+
+		for (auto iter = m_albums.begin(); iter != m_albums.end(); )
+		{
+			if (iter->getOwnerId() == user.getId())
+			{
+				iter = m_albums.erase(iter);
+			}
+			else
+			{
+				++iter;
+			}
+		}
+
 	}
 }
 
