@@ -187,8 +187,6 @@ std::list<User> DatabaseAccess::getUsersTaggedInPicture(const Picture& picture)
 	{
 		res.push_back(user);
 	}
-	if (!res.empty())
-		res.erase(std::unique(res.begin(), res.end()));
 	return res;
 }
 
@@ -567,7 +565,7 @@ Picture DatabaseAccess::getTopTaggedPicture()
  */
 std::list<Picture> DatabaseAccess::getTaggedPicturesOfUser(const User& user)
 {
-	std::string query = "SELECT PICTURES.ALBUM_ID, PICTURES.CREATION_DATE, PICTURES.ID, PICTURES.LOCATION, PICTURES.NAME FROM PICTURES  INNER JOIN  TAGS ON PICTURES.ID = TAGS.PICTURE_ID INNER JOIN ALBUMS ON ALBUMS.ID = PICTURES.ALBUM_ID INNER JOIN USERS ON USERS.ID = ALBUMS.USER_ID WHERE USERS.ID = " + std::to_string(user.getId()) + " ;";
+	std::string query = "SELECT PICTURES.ALBUM_ID, PICTURES.CREATION_DATE, PICTURES.ID, PICTURES.LOCATION, PICTURES.NAME FROM PICTURES  INNER JOIN TAGS ON PICTURES.ID = TAGS.PICTURE_ID WHERE TAGS.USER_ID =  " + std::to_string(user.getId()) + " ;";
 	this->runCommand(query, this->_db, loadIntoPictures);
 
 	return DatabaseAccess::pictures;

@@ -372,6 +372,7 @@ void AlbumManager::picturesTaggedUser()
 
 	auto taggedPictures = m_dataAccess.getTaggedPicturesOfUser(user);
 
+	
 	std::cout << "List of pictures that User@" << user.getId() << " tagged :" << std::endl;
 	for (const Picture& picture: taggedPictures) {
 		std::cout <<"   + "<< picture << std::endl;

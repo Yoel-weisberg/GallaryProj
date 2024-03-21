@@ -137,7 +137,7 @@ std::ostream& operator<<(std::ostream& strOut, const Picture& pic) {
 		<< pic.m_name << ", " << pic.m_creationDate << ", " << pic.m_pathOnDisk <<
 		"] " << pic.getTagsCount() << " users tagged : ";
 	
-	for (const auto user : pic.m_usersTags) {
+	for (const auto user :  pic.m_usersTags) {
 		strOut << "(" << user << ") ";
 	}
 	return strOut;
