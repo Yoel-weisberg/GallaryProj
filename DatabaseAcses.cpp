@@ -119,11 +119,19 @@ bool DatabaseAccess::isUserTaggedInPicture(const User& user, const Picture& pict
 	return times != 0 ? true : false;
 }
 
-std::vector<User> DatabaseAccess::getUsersTaggedInPicture(const Picture& picture)
+std::list<User> DatabaseAccess::getUsersTaggedInPicture(const Picture& picture)
 {
-	std::string query = "SELECT * FROM TAGS WHERE PICTURE_ID = " + std::to_string(picture.getId()) + " ;";
+	std::string query = "SELECT USERS.ID, USERS.NAME FROM USERS INNER JOIN TAGS ON USERS.ID = TAGS.USER_ID WHERE PICTURE_ID = " + std::to_string(picture.getId()) + " ;";
 	this->runCommand(query, this->_db, loadIntoUsers);
-	return DatabaseAccess::users;
+	std::list<User> res;
+
+	for (const auto& user : DatabaseAccess::users)
+	{
+		res.push_back(user);
+	}
+	if (!res.empty())
+		res.erase(std::unique(res.begin(), res.end()));
+	return res;
 }
 
 
@@ -139,6 +147,14 @@ Picture DatabaseAccess::getPicture(const int& id)
 	{
 		return *DatabaseAccess::pictures.begin();
 	}
+}
+
+int DatabaseAccess::timesAlbumsOfUserGotTagged(const User& user)
+{
+	std::string query = "SELECT count(*) FROM TAGS  INNER JOIN PICTURES  ON PICTURES.ID = TAGS.PICTURE_ID INNER JOIN ALBUMS ON ALBUMS.ID = PICTURES.ALBUM_ID INNER JOIN USERS ON USERS.ID = ALBUMS.USER_ID WHERE USERS.ID = " + std::to_string(user.getId()) + " ;";
+	int times = 0;
+	this->runCommand(query, this->_db, countCallback, &times);
+	return times;
 }
 
 
@@ -311,29 +327,22 @@ int DatabaseAccess::countTagsOfUser(const User& user)
 
 float DatabaseAccess::averageTagsPerAlbumOfUser(const User& user)
 {
-	return (float)this->countTagsOfUser(user) / this->countAlbumsOwnedOfUser(user);
+	if (this->countAlbumsOwnedOfUser(user) == 0)
+	{
+		return 0;
+	}
+	return (float)this->getTaggedPicturesOfUser(user).size() / this->countAlbumsOwnedOfUser(user);
 }
 
 User DatabaseAccess::getTopTaggedUser()
 {
-	this->runCommand("SELECT * FROM USERS ;", this->_db, loadIntoUsers);
-	int currentMax = 0;
-	User currentUserMax (0, "");
-	if (DatabaseAccess::users.empty())
+	std::string query = "SELECT USERS.ID, USERS.NAME FROM USERS INNER JOIN TAGS  ON USERS.ID = TAGS.USER_ID GROUP BY USERS.ID ORDER BY count(*) DESC LIMIT 1;";
+	this->runCommand(query, this->_db, loadIntoUsers);
+	if (DatabaseAccess::users.size() == 0)
 	{
-		throw std::invalid_argument("No user is in database ");
+		throw std::invalid_argument("There are no users at all \n");
 	}
-
-	for (const User user : DatabaseAccess::users)
-	{
-		int amountOfTags = this->countTagsOfUser(user);
-		if (amountOfTags > currentMax)
-		{
-			currentMax = amountOfTags;
-			currentUserMax = user;
-		}
-	}
-	return currentUserMax;
+	return *DatabaseAccess::users.begin();
 }
 
 Picture DatabaseAccess::getTopTaggedPicture()
@@ -347,7 +356,7 @@ Picture DatabaseAccess::getTopTaggedPicture()
 
 std::list<Picture> DatabaseAccess::getTaggedPicturesOfUser(const User& user)
 {
-	std::string query = "SELECT * FROM PICTURES INNER JOIN TAGS ON PICTURES.ID = TAGS.PICTURE_ID INNER JOIN USERS ON TAGS.USER_ID = USERS.ID WHERE USERS.ID = " + std::to_string(user.getId()) + " ;";
+	std::string query = "SELECT PICTURES.ALBUM_ID, PICTURES.CREATION_DATE, PICTURES.ID, PICTURES.LOCATION, PICTURES.NAME FROM PICTURES  INNER JOIN  TAGS ON PICTURES.ID = TAGS.PICTURE_ID INNER JOIN ALBUMS ON ALBUMS.ID = PICTURES.ALBUM_ID INNER JOIN USERS ON USERS.ID = ALBUMS.USER_ID WHERE USERS.ID = " + std::to_string(user.getId()) + " ;";
 	this->runCommand(query, this->_db, loadIntoPictures);
 
 	return DatabaseAccess::pictures;

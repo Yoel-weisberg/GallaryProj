@@ -67,10 +67,11 @@ public:
 
 	virtual bool isUserTaggedInPicture(const User& user, const Picture& picture);
 
-	virtual std::vector<User> getUsersTaggedInPicture(const Picture& picture) override;
+	virtual std::list<User> getUsersTaggedInPicture(const Picture& picture) override;
 private:
 	std::string removeWhiteSpacesBeforeAndAfter(const std::string& str);
 	bool runCommand(const std::string& sqlStatement, sqlite3* db, int (*callback)(void*, int, char**, char**) = nullptr, void* secondParam = nullptr);
 	Picture getPicture(const int& id);
+	int timesAlbumsOfUserGotTagged(const User& user);
 	sqlite3* _db;
 };

@@ -231,6 +231,12 @@ void AlbumManager::tagUserInPicture()
 	}
 	User user = m_dataAccess.getUser(userId);
 
+	if (m_dataAccess.isUserTaggedInPicture(user, pic)) {
+		throw std::invalid_argument("The user is alread tagged in the picture: " + picName + " \n");
+	}
+		
+
+
 	m_dataAccess.tagUserInPicture(m_openAlbum.getName(), pic.getName(), user.getId());
 	std::cout << "User @" << userIdStr << " successfully tagged in picture <" << pic.getName() << "> in album [" << m_openAlbum.getName() << "]" << std::endl;
 }
@@ -272,14 +278,14 @@ void AlbumManager::listUserTags()
 	}
 	auto pic = m_dataAccess.getPictureFromAlbum(m_openAlbum.getName(), picName);
 
-	std::vector <User> users = m_dataAccess.getUsersTaggedInPicture(pic);
+	std::list <User> users = m_dataAccess.getUsersTaggedInPicture(pic);
 
 	if ( users.empty())  {
 		throw MyException("Error: There is no user tegged in <" + picName + ">.\n");
 	}
 
 	std::cout << "Tagged users in picture <" << picName << ">:" << std::endl;
-	for (const User user: users) {
+	for (const User& user : users) {
 		std::cout << user << std::endl;
 	}
 	std::cout << std::endl;

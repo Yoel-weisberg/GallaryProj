@@ -54,5 +54,6 @@ public:
 
 	virtual bool isUserTaggedInPicture(const User& user, const Picture& picture) = 0;
 
-	virtual std::vector<User> getUsersTaggedInPicture(const Picture& picture) = 0;
+	virtual std::list<User> getUsersTaggedInPicture(const Picture& picture) = 0;
+
 };
