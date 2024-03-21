@@ -47,5 +47,12 @@ public:
 	virtual void close() = 0;
 	virtual void clear() = 0;
 
-	virtual int getTheNextUserId() = 0;
+	virtual bool doesPictureExistsInAlbum(const std::string& albumName, const std::string& pictureName) = 0;
+	virtual int getTheNextId(const std::string& tableName) = 0;
+
+	virtual Picture getPictureFromAlbum(const std::string& albumName, const std::string& pictureName) = 0;
+
+	virtual bool isUserTaggedInPicture(const User& user, const Picture& picture) = 0;
+
+	virtual std::vector<User> getUsersTaggedInPicture(const Picture& picture) = 0;
 };

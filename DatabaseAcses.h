@@ -59,11 +59,18 @@ public:
 	void close() override {};
 	void clear() override;
 
-	virtual int getTheNextUserId() override;
+	virtual int getTheNextId(const std::string& tableName) override;
 
+	virtual bool doesPictureExistsInAlbum(const std::string& albumName, const std::string& pictureName) override;
+
+	virtual Picture getPictureFromAlbum(const std::string& albumName, const std::string& pictureName) override;
+
+	virtual bool isUserTaggedInPicture(const User& user, const Picture& picture);
+
+	virtual std::vector<User> getUsersTaggedInPicture(const Picture& picture) override;
 private:
+	std::string removeWhiteSpacesBeforeAndAfter(const std::string& str);
 	bool runCommand(const std::string& sqlStatement, sqlite3* db, int (*callback)(void*, int, char**, char**) = nullptr, void* secondParam = nullptr);
-	Picture getPictureFromAlbum(const std::string& albumName, const std::string& picture);
 	Picture getPicture(const int& id);
 	sqlite3* _db;
 };

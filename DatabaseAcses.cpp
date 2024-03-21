@@ -1,5 +1,6 @@
 #include "DatabaseAcses.h"
 #include "sqlite3.h"
+#include <algorithm>
 #include <io.h>
 
 #define CREATE_USERS "CREATE TABLE IF NOT EXISTS USERS (ID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, NAME TEXT NOT NULL);"
@@ -40,17 +41,50 @@ bool DatabaseAccess::open()
 
 void DatabaseAccess::clear() {}
 
-int DatabaseAccess::getTheNextUserId()
+int DatabaseAccess::getTheNextId(const std::string& tableName)
 {
-	std::string command = "SELECT max(ID) FROM USERS;";
+	std::string command = "SELECT max(ID) FROM " + tableName + " ;" ;
 	int currentMax = 0;
 
 	this->runCommand(command, this->_db, countCallback, &currentMax);
 	return currentMax == NULL ? 1 : currentMax + 1;
 }
 
+bool DatabaseAccess::doesPictureExistsInAlbum(const std::string& albumName, const std::string& pictureName)
+{
+	int albumId = this->openAlbum(albumName).getId();
+	std::string query = "SELECT * FROM PICTURES WHERE ALBUM_ID = " + std::to_string(albumId) + " AND NAME = \" " + pictureName + " \" ;";
+	this->runCommand(query, this->_db, loadIntoPictures);
+	return DatabaseAccess::pictures.empty() ? false : true;
+}
+
+std::string DatabaseAccess::removeWhiteSpacesBeforeAndAfter(const std::string& str)
+{
+	// Find the first non-whitespace character from the beginning
+	size_t start = str.find_first_not_of(" \t\n\r");
+
+	// If the string is all white spaces, return an empty string
+	if (start == std::string::npos)
+		return "";
+
+	// Find the last non-whitespace character from the end
+	size_t end = str.find_last_not_of(" \t\n\r");
+
+	// Return the trimmed string
+	return str.substr(start, end - start + 1);
+}
+
 bool DatabaseAccess::runCommand(const std::string& sqlStatement, sqlite3* db, int(*callback)(void*, int, char**, char**), void* secondParam)
 {
+	if (!DatabaseAccess::users.empty())
+		DatabaseAccess::users.clear();
+
+	if(!DatabaseAccess::albums.empty())
+		DatabaseAccess::albums.clear();
+
+	if(!DatabaseAccess::pictures.empty())
+		DatabaseAccess::pictures.clear();
+
 	char** errMessage = nullptr;
 	int res = sqlite3_exec(db, sqlStatement.c_str(), callback, secondParam, errMessage);
 	if (res != SQLITE_OK)
@@ -63,7 +97,7 @@ bool DatabaseAccess::runCommand(const std::string& sqlStatement, sqlite3* db, in
 Picture DatabaseAccess::getPictureFromAlbum(const std::string& albumName, const std::string& picture)
 {
 	int albumId = this->openAlbum(albumName).getId();
-	std::string command = "SELCET * FROM PICTURES WHERE ALBUM_ID = " + std::to_string(albumId) + " AND NAME = " + picture + " ;";
+	std::string command = "SELECT * FROM PICTURES WHERE ALBUM_ID = " + std::to_string(albumId) + " AND NAME = \" " + this->removeWhiteSpacesBeforeAndAfter(picture) + " \" ;";
 
 	this->runCommand(command, this->_db, loadIntoPictures);
 
@@ -76,6 +110,22 @@ Picture DatabaseAccess::getPictureFromAlbum(const std::string& albumName, const 
 		throw std::invalid_argument("Picture with that name was not found ");
 	}
 }
+
+bool DatabaseAccess::isUserTaggedInPicture(const User& user, const Picture& picture)
+{
+	std::string query = "SELECT COUNT(*) FROM TAGS WHERE USER_ID = " + std::to_string(user.getId()) + " AND PICTURE_ID = " + std::to_string(picture.getId()) + " ;";
+	int times = 0;
+	this->runCommand(query, this->_db, countCallback, &times);
+	return times != 0 ? true : false;
+}
+
+std::vector<User> DatabaseAccess::getUsersTaggedInPicture(const Picture& picture)
+{
+	std::string query = "SELECT * FROM TAGS WHERE PICTURE_ID = " + std::to_string(picture.getId()) + " ;";
+	this->runCommand(query, this->_db, loadIntoUsers);
+	return DatabaseAccess::users;
+}
+
 
 Picture DatabaseAccess::getPicture(const int& id)
 {
@@ -101,7 +151,7 @@ const std::list<Album> DatabaseAccess::getAlbums()
 
 const std::list<Album> DatabaseAccess::getAlbumsOfUser(const User& user)
 {
-	std::string command = "SELECT * FROM ALBUMS WHERE USER_ID = " + user.getId();
+	std::string command = "SELECT * FROM ALBUMS WHERE USER_ID = " + std::to_string(user.getId()) + " ;";
 	this->runCommand(command, this->_db, loadIntoAlbums);
 	return DatabaseAccess::albums;
 }
@@ -119,7 +169,7 @@ void DatabaseAccess::deleteAlbum(const std::string& albumName, int userId)
 	this->runCommand(command, this->_db);
 
 
-	command = "DELETE FROM ALBUMS WHERE name = " + albumName + " AND USER_ID = " + std::to_string(userId)  + ";";
+	command = "DELETE FROM ALBUMS WHERE name = \" " + albumName + " \" AND USER_ID = " + std::to_string(userId)  + ";";
 	this->runCommand(command, this->_db);
 }
 
@@ -133,8 +183,10 @@ bool DatabaseAccess::doesAlbumExists(const std::string& albumName, int userId)
 
 Album DatabaseAccess::openAlbum(const std::string& albumName)
 {
-	std::string command = "SELECT * FROM ALBUMS WHERE NAME = \" " + albumName + " \" ;";
+	std::string albumNameWithNoSpaces = this->removeWhiteSpacesBeforeAndAfter(albumName);
+	std::string command = "SELECT * FROM ALBUMS WHERE NAME = \" " + albumNameWithNoSpaces + " \" ;";
 	this->runCommand(command, this->_db, loadIntoAlbums);
+
 	if (DatabaseAccess::albums.size() != 0)
 	{
 		auto begin = DatabaseAccess::albums.begin();
@@ -178,7 +230,7 @@ void DatabaseAccess::removePictureFromAlbumByName(const std::string& albumName, 
 void DatabaseAccess::untagUserInPicture(const std::string& albumName, const std::string& pictureName, int userId)
 {
 	int pictureId = this->getPictureFromAlbum(albumName, pictureName).getId();
-	std::string command = "DELETE FROM TAGS WHERE PICTURE_ID = " + std::to_string(pictureId) + "AND USER_ID = " + std::to_string(userId) + " ;";
+	std::string command = "DELETE FROM TAGS WHERE PICTURE_ID = " + std::to_string(pictureId) + " AND USER_ID = " + std::to_string(userId) + " ;";
 	this->runCommand(command, this->_db);
 }
 
@@ -203,8 +255,10 @@ void DatabaseAccess::createUser(User& user)
 void DatabaseAccess::deleteUser(const User& user)
 {
 	std::string command = "DELETE FROM TAGS WHERE USER_ID = " + std::to_string(user.getId()) + " ;";
+	this->runCommand(command, this->_db);
 	command = "DELETE FROM ALBUMS WHERE USER_ID = " + std::to_string(user.getId()) + " ;";
-	command = "DELETE FROM USERS WHERE NAME = " + std::to_string(user.getId()) + " ;";
+	this->runCommand(command, this->_db);
+	command = "DELETE FROM USERS WHERE ID = " + std::to_string(user.getId()) + " ;";
 	this->runCommand(command, this->_db);
 }
 
@@ -323,7 +377,7 @@ int loadIntoAlbums(void* data, int argc, char** argv, char** azColName)
 			albumObj.setName(argv[i]);
 		}
 		else if (std::string(azColName[i]) == ID) {
-			albumObj.setName(argv[i]);
+			albumObj.setId(std::stoi(argv[i]));
 		}
 		// Add the newly created Album object to the passed-in vector
 	}
