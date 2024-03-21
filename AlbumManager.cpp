@@ -151,15 +151,13 @@ void AlbumManager::addPictureToAlbum()
 	refreshOpenAlbum();
 
 	std::string picName = getInputFromConsole("Enter picture name: ");
-	if (m_openAlbum.doesPictureExists(picName) ) {
+	if (m_dataAccess.doesPictureExistsInAlbum(m_openAlbum.getName(), picName)) {
 		throw MyException("Error: Failed to add picture, picture with the same name already exists.\n");
 	}
 	
 	Picture picture(m_dataAccess.getTheNextId(PICTURE_TABLE), picName);
 	std::string picPath = getInputFromConsole("Enter picture path: ");
 	picture.setPath(picPath);
-
-	m_dataAccess.addPictureToAlbumByName(m_openAlbum.getName(), picture);
 
 	std::cout << "Picture [" << picture.getId() << "] successfully added to Album [" << m_openAlbum.getName() << "]." << std::endl;
 }
