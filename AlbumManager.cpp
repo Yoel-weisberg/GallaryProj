@@ -4,6 +4,10 @@
 #include "MyException.h"
 #include "AlbumNotOpenException.h"
 
+#define PICTURE_TABLE "PICTURES"
+#define USERS_TABLE "USERS"
+#define ALBUMS_TABLE "ALBUMS"
+
 
 AlbumManager::AlbumManager(IDataAccess& dataAccess) :
     m_dataAccess(dataAccess), m_nextPictureId(100), m_nextUserId(200)
@@ -49,11 +53,12 @@ void AlbumManager::createAlbum()
 	}
 
 	std::string name = getInputFromConsole("Enter album name - ");
-	if ( m_dataAccess.doesAlbumExists(name,userId) ) {
+	if ( m_dataAccess.doesAlbumExists(name, userId) ) {
 		throw MyException("Error: Failed to create album, album with the same name already exists\n");
 	}
 
-	Album newAlbum(userId,name);
+	Album newAlbum(userId, name);
+	newAlbum.setId(m_dataAccess.getTheNextId(ALBUMS_TABLE));
 	m_dataAccess.createAlbum(newAlbum);
 
 	std::cout << "Album [" << newAlbum.getName() << "] created successfully by user@" << newAlbum.getOwnerId() << std::endl;
@@ -146,15 +151,13 @@ void AlbumManager::addPictureToAlbum()
 	refreshOpenAlbum();
 
 	std::string picName = getInputFromConsole("Enter picture name: ");
-	if (m_openAlbum.doesPictureExists(picName) ) {
+	if (m_dataAccess.doesPictureExistsInAlbum(m_openAlbum.getName(), picName)) {
 		throw MyException("Error: Failed to add picture, picture with the same name already exists.\n");
 	}
 	
-	Picture picture(++m_nextPictureId, picName);
+	Picture picture(m_dataAccess.getTheNextId(PICTURE_TABLE), picName);
 	std::string picPath = getInputFromConsole("Enter picture path: ");
 	picture.setPath(picPath);
-
-	m_dataAccess.addPictureToAlbumByName(m_openAlbum.getName(), picture);
 
 	std::cout << "Picture [" << picture.getId() << "] successfully added to Album [" << m_openAlbum.getName() << "]." << std::endl;
 }
@@ -164,12 +167,11 @@ void AlbumManager::removePictureFromAlbum()
 	refreshOpenAlbum();
 
 	std::string picName = getInputFromConsole("Enter picture name: ");
-	if ( !m_openAlbum.doesPictureExists(picName) ) {
+	if ( !m_dataAccess.doesPictureExistsInAlbum(m_openAlbum.getName(), picName)) {
 		throw MyException("Error: There is no picture with name <" + picName + ">.\n");
 	}
 	
-	auto picture = m_openAlbum.getPicture(picName);
-	m_dataAccess.removePictureFromAlbumByName(m_openAlbum.getName(), picture.getName());
+	m_dataAccess.removePictureFromAlbumByName(m_openAlbum.getName(), picName);
 	std::cout << "Picture <" << picName << "> successfully removed from Album [" << m_openAlbum.getName() << "]." << std::endl;
 }
 
@@ -214,11 +216,11 @@ void AlbumManager::tagUserInPicture()
 	refreshOpenAlbum();
 
 	std::string picName = getInputFromConsole("Enter picture name: ");
-	if ( !m_openAlbum.doesPictureExists(picName) ) {
+	if ( !m_dataAccess.doesPictureExistsInAlbum(m_openAlbum.getName(), picName)) {
 		throw MyException("Error: There is no picture with name <" + picName + ">.\n");
 	}
 	
-	Picture pic = m_openAlbum.getPicture(picName);
+	Picture pic = m_dataAccess.getPictureFromAlbum(m_openAlbum.getName(), picName);
 	
 	std::string userIdStr = getInputFromConsole("Enter user id to tag: ");
 	int userId = std::stoi(userIdStr);
@@ -226,6 +228,12 @@ void AlbumManager::tagUserInPicture()
 		throw MyException("Error: There is no user with id @" + userIdStr + "\n");
 	}
 	User user = m_dataAccess.getUser(userId);
+
+	if (m_dataAccess.isUserTaggedInPicture(user, pic)) {
+		throw std::invalid_argument("The user is alread tagged in the picture: " + picName + " \n");
+	}
+		
+
 
 	m_dataAccess.tagUserInPicture(m_openAlbum.getName(), pic.getName(), user.getId());
 	std::cout << "User @" << userIdStr << " successfully tagged in picture <" << pic.getName() << "> in album [" << m_openAlbum.getName() << "]" << std::endl;
@@ -236,11 +244,11 @@ void AlbumManager::untagUserInPicture()
 	refreshOpenAlbum();
 
 	std::string picName = getInputFromConsole("Enter picture name: ");
-	if (!m_openAlbum.doesPictureExists(picName)) {
+	if (! m_dataAccess.doesPictureExistsInAlbum(m_openAlbum.getName(), picName)) {
 		throw MyException("Error: There is no picture with name <" + picName + ">.\n");
 	}
 
-	Picture pic = m_openAlbum.getPicture(picName);
+	Picture pic = m_dataAccess.getPictureFromAlbum(m_openAlbum.getName(), picName);
 
 	std::string userIdStr = getInputFromConsole("Enter user id: ");
 	int userId = stoi(userIdStr);
@@ -249,7 +257,7 @@ void AlbumManager::untagUserInPicture()
 	}
 	User user = m_dataAccess.getUser(userId);
 
-	if (! pic.isUserTagged(user)) {
+	if (! m_dataAccess.isUserTaggedInPicture(user, pic)) {
 		throw MyException("Error: The user was not tagged! \n");
 	}
 
@@ -263,20 +271,19 @@ void AlbumManager::listUserTags()
 	refreshOpenAlbum();
 
 	std::string picName = getInputFromConsole("Enter picture name: ");
-	if ( !m_openAlbum.doesPictureExists(picName) ) {
+	if ( ! m_dataAccess.doesPictureExistsInAlbum(m_openAlbum.getName(), picName)) {
 		throw MyException("Error: There is no picture with name <" + picName + ">.\n");
 	}
-	auto pic = m_openAlbum.getPicture(picName); 
+	auto pic = m_dataAccess.getPictureFromAlbum(m_openAlbum.getName(), picName);
 
-	const std::set<int> users = pic.getUserTags();
+	std::list <User> users = m_dataAccess.getUsersTaggedInPicture(pic);
 
-	if ( 0 == users.size() )  {
+	if ( users.empty())  {
 		throw MyException("Error: There is no user tegged in <" + picName + ">.\n");
 	}
 
 	std::cout << "Tagged users in picture <" << picName << ">:" << std::endl;
-	for (const int user_id: users) {
-		const User user = m_dataAccess.getUser(user_id);
+	for (const User& user : users) {
 		std::cout << user << std::endl;
 	}
 	std::cout << std::endl;
@@ -289,7 +296,10 @@ void AlbumManager::addUser()
 {
 	std::string name = getInputFromConsole("Enter user name: ");
 
-	User user(++m_nextUserId,name);
+	if (m_dataAccess.doesUserExists(name)) {
+		throw std::invalid_argument("The user already exsists \n");
+	}
+	User user(m_dataAccess.getTheNextId(USERS_TABLE), name);
 	
 	m_dataAccess.createUser(user);
 	std::cout << "User " << name << " with id @" << user.getId() << " created successfully." << std::endl;
@@ -362,6 +372,7 @@ void AlbumManager::picturesTaggedUser()
 
 	auto taggedPictures = m_dataAccess.getTaggedPicturesOfUser(user);
 
+	
 	std::cout << "List of pictures that User@" << user.getId() << " tagged :" << std::endl;
 	for (const Picture& picture: taggedPictures) {
 		std::cout <<"   + "<< picture << std::endl;
