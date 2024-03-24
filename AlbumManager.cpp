@@ -5,7 +5,6 @@
 #include "AlbumNotOpenException.h"
 #include <Windows.h>
 
-
 #define PICTURE_TABLE "PICTURES"
 #define USERS_TABLE "USERS"
 #define ALBUMS_TABLE "ALBUMS"
@@ -16,9 +15,60 @@
 #define PAINT_CHOICE 1
 #define IRFA_CHOICE 2	
 
+HANDLE childProcessHandle = nullptr; // Handle to the child process
+
+
+BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
+{
+	switch (fdwCtrlType)
+	{
+		// Handle the CTRL-C signal.
+	case CTRL_C_EVENT:
+		if (childProcessHandle != nullptr)
+		{
+			// Terminate the process
+			if (!TerminateProcess(childProcessHandle, 0)) {
+				std::cerr << "Failed to terminate process. Error code: " << GetLastError() << std::endl;
+				CloseHandle(childProcessHandle); // Close the process handle
+				return 1;
+			}
+
+			std::cout << "Process terminated successfully." << std::endl;
+
+			// Close the process handle
+			CloseHandle(childProcessHandle);
+		}
+		return TRUE;
+
+		// CTRL-CLOSE: confirm that the user wants to exit.
+	case CTRL_CLOSE_EVENT:
+		Beep(600, 200);
+		printf("Ctrl-Close event\n\n");
+		return TRUE;
+
+		// Pass other signals to the next handler.
+	case CTRL_BREAK_EVENT:
+		Beep(900, 200);
+		printf("Ctrl-Break event\n\n");
+		return FALSE;
+
+	case CTRL_LOGOFF_EVENT:
+		Beep(1000, 200);
+		printf("Ctrl-Logoff event\n\n");
+		return FALSE;
+
+	case CTRL_SHUTDOWN_EVENT:
+		Beep(750, 500);
+		printf("Ctrl-Shutdown event\n\n");
+		return FALSE;
+
+	default:
+		return FALSE;
+	}
+}
 
 AlbumManager::AlbumManager(IDataAccess& dataAccess) :
-    m_dataAccess(dataAccess), m_nextPictureId(100), m_nextUserId(200)
+	m_dataAccess(dataAccess), m_nextPictureId(100), m_nextUserId(200)
 {
 	// Left empty
 	m_dataAccess.open();
@@ -435,6 +485,12 @@ bool AlbumManager::isCurrentAlbumSet() const
 
 void AlbumManager::openPictureInApp()
 {
+	if (!SetConsoleCtrlHandler(CtrlHandler, TRUE))
+	{
+		std::cout << "Failed " << std::endl;
+		exit();
+	}
+
 	std::string picture = getInputFromConsole("Enter name of picture: ");
 	if (!m_dataAccess.doesPictureExistsInAlbum(m_openAlbum.getName(), picture))
 	{
@@ -484,12 +540,16 @@ void AlbumManager::openPictureInApp()
 		std::cerr << "CreateProcess failed: " << GetLastError() << std::endl;
 	}
 
+	childProcessHandle = pi.hProcess;
+
 	// Wait until child process exits.
 	WaitForSingleObject(pi.hProcess, INFINITE);
 
 	// Close process and thread handles.
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);
+
+	childProcessHandle = nullptr;
 }
 
 const std::vector<struct CommandGroup> AlbumManager::m_prompts  = {

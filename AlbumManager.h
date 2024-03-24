@@ -3,7 +3,7 @@
 #include "Constants.h"
 #include "MemoryAccess.h"
 #include "Album.h"
-
+#include <Windows.h>
 
 class AlbumManager
 {
