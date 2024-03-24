@@ -107,6 +107,26 @@ const std::set<int>& Picture::getUserTags() const
 	return m_usersTags;
 }
 
+std::string Picture::getLocation() const
+{
+	return this->_location;
+}
+
+void Picture::setLocation(const std::string& val)
+{
+	this->_location = val;
+}
+
+int Picture::getAlbumId() const
+{
+	return this->_albumId;
+}
+
+void Picture::setAlbumId(const int& val)
+{
+	this->_albumId = val;
+}
+
 bool Picture::operator==(const Picture& other) const
 {
 	return m_pictureId == other.getId();
@@ -117,7 +137,7 @@ std::ostream& operator<<(std::ostream& strOut, const Picture& pic) {
 		<< pic.m_name << ", " << pic.m_creationDate << ", " << pic.m_pathOnDisk <<
 		"] " << pic.getTagsCount() << " users tagged : ";
 	
-	for (const auto user : pic.m_usersTags) {
+	for (const auto user :  pic.m_usersTags) {
 		strOut << "(" << user << ") ";
 	}
 	return strOut;

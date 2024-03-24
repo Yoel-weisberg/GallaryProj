@@ -139,6 +139,16 @@ bool Album::operator==(const Album& other) const
 	return m_ownerId == other.getOwnerId();
 }
 
+int Album::getId() const
+{
+	return this->_id;
+}
+
+void Album::setId(const int& val)
+{
+	this->_id = val;
+}
+
 
 
 std::ostream& operator<<(std::ostream& strOut, const Album& album)

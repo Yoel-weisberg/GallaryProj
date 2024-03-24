@@ -34,6 +34,12 @@ public:
 
 	const std::set<int>& getUserTags() const;
 
+	std::string getLocation() const;
+	void setLocation(const std::string& val);
+
+	int getAlbumId() const;
+	void setAlbumId(const int& val);
+
 	bool operator==(const Picture& other) const;
 	friend std::ostream& operator<<(std::ostream& strout, const Picture& object);
 
@@ -43,4 +49,6 @@ private:
 	std::string m_pathOnDisk;
 	std::string m_creationDate;
 	std::set<int> m_usersTags;
+	std::string _location;
+	int _albumId;
 };
