@@ -3,10 +3,18 @@
 #include "Constants.h"
 #include "MyException.h"
 #include "AlbumNotOpenException.h"
+#include <Windows.h>
+
 
 #define PICTURE_TABLE "PICTURES"
 #define USERS_TABLE "USERS"
 #define ALBUMS_TABLE "ALBUMS"
+
+#define PAINT_APP "C:\\Windows\\System32\\mspaint.exe "
+#define IRFA_APP "\"C:\\Program Files (x86)\\IrfanView\\i_view32.exe \" "
+
+#define PAINT_CHOICE 1
+#define IRFA_CHOICE 2	
 
 
 AlbumManager::AlbumManager(IDataAccess& dataAccess) :
@@ -158,6 +166,8 @@ void AlbumManager::addPictureToAlbum()
 	Picture picture(m_dataAccess.getTheNextId(PICTURE_TABLE), picName);
 	std::string picPath = getInputFromConsole("Enter picture path: ");
 	picture.setPath(picPath);
+
+	m_dataAccess.addPictureToAlbumByName(m_openAlbum.getName(), picture);
 
 	std::cout << "Picture [" << picture.getId() << "] successfully added to Album [" << m_openAlbum.getName() << "]." << std::endl;
 }
@@ -423,6 +433,65 @@ bool AlbumManager::isCurrentAlbumSet() const
     return !m_currentAlbumName.empty();
 }
 
+void AlbumManager::openPictureInApp()
+{
+	std::string picture = getInputFromConsole("Enter name of picture: ");
+	if (!m_dataAccess.doesPictureExistsInAlbum(m_openAlbum.getName(), picture))
+	{
+		throw MyException("Picture dose not exist in opened album");
+	}
+
+	int app = std::stoi(getInputFromConsole("What app to use ? \n(either 1 for paint or 2 for IrfarView): "));
+
+	std::string appLocation = "";
+	switch (app)
+	{
+	case PAINT_CHOICE:
+		appLocation = PAINT_APP;
+		break;
+
+	case IRFA_CHOICE:
+		appLocation = IRFA_APP;
+		break;
+
+	default:
+		throw std::invalid_argument("Not valid choice was entered \n");
+		break;
+	}
+	Picture pic = m_dataAccess.getPictureFromAlbum(m_openAlbum.getName(), picture);
+	// Set up structures for process creation
+	STARTUPINFO si;
+	PROCESS_INFORMATION pi;
+	ZeroMemory(&si, sizeof(si));
+	ZeroMemory(&pi, sizeof(pi));
+	si.cb = sizeof(si);
+
+	std::string commandLineStr = appLocation + pic.getLocation();
+	LPSTR commandLine =  const_cast<LPSTR>(commandLineStr.c_str());
+	// Create the process
+	if (!CreateProcess(
+		nullptr,                // Application name
+		commandLine, // Command line
+		nullptr,                // Process handle not inheritable
+		nullptr,                // Thread handle not inheritable
+		FALSE,                  // Set handle inheritance to FALSE
+		0,                      // No creation flags
+		nullptr,                // Use parent's environment block
+		nullptr,                // Use parent's starting directory
+		&si,                    // Pointer to STARTUPINFO structure
+		&pi                     // Pointer to PROCESS_INFORMATION structure
+	)) {
+		std::cerr << "CreateProcess failed: " << GetLastError() << std::endl;
+	}
+
+	// Wait until child process exits.
+	WaitForSingleObject(pi.hProcess, INFINITE);
+
+	// Close process and thread handles.
+	CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
+}
+
 const std::vector<struct CommandGroup> AlbumManager::m_prompts  = {
 	{
 		"Supported Albums Operations:\n----------------------------",
@@ -444,7 +513,8 @@ const std::vector<struct CommandGroup> AlbumManager::m_prompts  = {
 			{ LIST_PICTURES  , "List pictures." },
 			{ TAG_USER		 , "Tag user." },
 			{ UNTAG_USER	 , "Untag user." },
-			{ LIST_TAGS		 , "List tags." }
+			{ LIST_TAGS		 , "List tags." },
+			{ OPEN_PICTURE_IN_APP, "Open picture in app" }
 		}
 	},
 	{
@@ -494,6 +564,7 @@ const std::map<CommandType, AlbumManager::handler_func_t> AlbumManager::m_comman
 	{ TOP_TAGGED_USER, &AlbumManager::topTaggedUser },
 	{ TOP_TAGGED_PICTURE, &AlbumManager::topTaggedPicture },
 	{ PICTURES_TAGGED_USER, &AlbumManager::picturesTaggedUser },
+	{ OPEN_PICTURE_IN_APP, &AlbumManager::openPictureInApp },
 	{ HELP, &AlbumManager::help },
 	{ EXIT, &AlbumManager::exit }
 };

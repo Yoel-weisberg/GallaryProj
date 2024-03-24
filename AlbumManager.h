@@ -58,6 +58,8 @@ private:
 	void refreshOpenAlbum();
     bool isCurrentAlbumSet() const;
 
+	void openPictureInApp();
+
 	static const std::vector<struct CommandGroup> m_prompts;
 	static const std::map<CommandType, handler_func_t> m_commands;
 
