@@ -42,6 +42,7 @@ public:
 	virtual User getTopTaggedUser() = 0;
 	virtual Picture getTopTaggedPicture() = 0;
 	virtual std::list<Picture> getTaggedPicturesOfUser(const User& user) = 0;
+
 	
 	virtual bool open() = 0;
 	virtual void close() = 0;
