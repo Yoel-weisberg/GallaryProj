@@ -93,6 +93,7 @@
     <ClInclude Include="ItemNotFoundException.h" />
     <ClInclude Include="MemoryAccess.h" />
     <ClInclude Include="Constants.h" />
+    <ClInclude Include="MongoDBAcses.h" />
     <ClInclude Include="MyException.h" />
     <ClInclude Include="Picture.h" />
     <ClInclude Include="sqlite3.h" />
