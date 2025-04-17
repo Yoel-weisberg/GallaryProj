@@ -1,0 +1,5 @@
+{
+    "docify.commentService.programmingLanguage": "cpp",
+    "docify.commentService.docstringFormat": "Google",
+    "docify.commentService.sidePanelReviewMode": true
+}
